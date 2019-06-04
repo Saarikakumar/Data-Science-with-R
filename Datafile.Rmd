@@ -1,0 +1,261 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+#Introduction
+Alcohol was the fifth highest overall risk factor for motality and disease burden worldwide and the leading risk factor for people ages 15-49 in 2010 (Partick et al, 2017). Heavy alcohol use has been found to be associated with negative health risks such as premature mortality. Differential effects have been found based on SES level, education, employment and financial capacity. In a sample of older adults in the US, an association between higher education and higher odds of ever drinking was found. A significant interaction between race and education level on odds of ever drinking was also observed, such that there was a smaller effect of higher education on drinking for blacks as compared to whites. For whites, high school and college graduation were associated with greater odds of ever drinking, whereas only high school graduation was associated with greater odds among blacks. Additionally, data from the National Epidemiologic Survey on Alcohol and Related Conditions suggest that at Wave 1, alcohol consumption was greatest among whites followed by hispanics and blacks (Delker et al, 2016). Weekly drinking was higher among Hispanics compared to Whites and Blacks. At wave 2, Asians reported the least amount of drinking.
+
+Age differences have been observed in alcohol consumption levels among adults in the US. A study examining changes in binge drinking among a sample of young adults found that binge drinking tended to decrease for those in their early 20s, was stable for those in their mid 20s and increased for those 29-30 year olds (Patrick et al., 2017). The results suggest that interventions aimed at those at the end of adulthood may be beneficial in addressing binge drinking.
+
+Racial and ethnic as well as gender disparities in cigarette smoking have also been observed. The CDC reported that in 2014, prevalence of cigarette smoking was higher among males, adults aged 25-44, multiracial adults and American Indian/Alaskan Natives. The lowest prevalence of cigarette smoking was among adults aged 65, followed by adults aged 18-24. In addition, Prevalence rates were lowest among Asians and Hispanics. This suggests that smoking interventions should target males, adults aged 24-55, multiracial and American Indians/Alaskan Natives.
+
+A relationship between smoking and alcohol consumption has been observed in a sample of undergraduate students. Smokers and experimenters reported a significantly greater number of drinks per occasion compared to never smokers. Number of drinks per occasion was also associated with increased odds of being a smoker (Reed, Wang, Shillington, Clapp, & Lange, 2007). This suggests that those who drink are likely to also be smokers.
+
+#Research questions
+1.	Does a greater amount of binge drinking occur in younger (18-24) adults?
+2.	Does alcohol consumption vary based on education level?
+3.	Is there a relationship between alcohol consumption and use of tobacco/e-cigarettes?
+4.	Are there racial/ethnic differences in alcohol use? 
+5.  Are there racial/ethnic differences in cigarette use?
+6.	Does cigarette use vary based on gender? 
+
+#Hypothesis
+1. A greater amount of binge drinking will be reported by adults aged 25-44.
+2. Those who have higher education levels will report greater numbers of avg alcoholic drinks per day in the past 30 days.
+3. Smokers are more likely to report greater numbers of avg alcoholic drinks per day in the past 30 days.
+4. Whites will report the greatest number of alcoholic drinks per day in the past 30 days and Asians will report the lowest number. 
+5. The greatest number of participants who are current smokers will identify as multiracial and the least number will identify as Asian.
+6. A greater number of men will report being current smokers than women.
+
+#import data from excel
+```{r}
+library(tidyverse)
+brfss_final= read.csv("brfss_final.csv")
+```
+#convert variables to be factors
+```{r}
+brfss_final$Smoke_status <- as.factor(brfss_final$Smoke_status)
+brfss_final$binge_drink <- as.factor(brfss_final$binge_drink)
+brfss_final$Education <- as.factor(brfss_final$Education)
+brfss_final$Ecig_status <- as.factor(brfss_final$Ecig_status )
+brfss_final$Education <- as.factor(brfss_final$Education)
+brfss_final$SEX <- as.factor(brfss_final$SEX)
+brfss_final$race <- as.factor(brfss_final$race)
+brfss_final$AGE <- as.factor(brfss_final$AGE)
+brfss_final$smoke_level <- as.factor(brfss_final$smoke_level)
+```
+#recode race and age
+```{r}
+race_new <- ifelse(brfss_final$race == 1, "White", ifelse (brfss_final$race == 77 | brfss_final$race == 99, "missing", ifelse (brfss_final$race == 7, "multiracial", ifelse(brfss_final$race == 4, "Asian", "other"))))
+
+brfss_final <- cbind(brfss_final, race_new)
+
+age_new <- ifelse(brfss_final$AGE == 1, "18-24", ifelse (brfss_final$AGE == 2 | brfss_final$AGE == 3, "25-44", ifelse (brfss_final$AGE == 4 | brfss_final$AGE == 5, "45-64", "65 or older")))
+
+brfss_final <- cbind(brfss_final, age_new)
+
+```
+#Exploratory data analysis
+
+#binge drinking by age
+```{r}
+#subset data to only include those who reported binge drinking
+binge_drinker <- ifelse(brfss_final$binge_drink == 2, "binge_drinker", "no/missing")
+brfss_final <- cbind(brfss_final, binge_drinker)
+brfss_subset_binge_drink <- subset(brfss_final, binge_drinker == "binge_drinker")
+binge_yes <- brfss_subset_binge_drink$binge_drinker != "no/missing"
+binge_drnk <- cbind(brfss_subset_binge_drink, binge_yes)
+binge_drnk$binge_yes<- as.factor(binge_drnk$binge_yes)
+
+table(binge_drnk$binge_yes, binge_drnk$age_new)
+
+ggplot(binge_drnk, aes(x = age_new, fill = binge_yes)) + geom_bar(fill = "#b096d9") + scale_x_discrete() + ggtitle("Binge drinking by age")
+```
+#avg number alcoholic drinks per day in past 30 days by education level
+```{r}
+# subset data to get rid of those who reported not knowing number of drinks per week
+brfss_subset_alc_consumption <- subset(brfss_final, Avgdrnk_day >=1 & Avgdrnk_day < 77 )
+
+#filter those who did not report their education
+alc_educ <- filter (brfss_subset_alc_consumption, Education != 9)
+alc_educ$Education <- factor(alc_educ$Education)
+
+# graph of average number of drinks per day in past 30 days by education level
+ggplot(alc_educ, aes(x = Education, y = Avgdrnk_day, color=Education))+geom_boxplot() + labs(title = "Average number of drinks per day by education level")
+
+
+```
+#relationship between cigarette use and avg number alcoholic drinks per day in past 30 days
+```{r}
+# subset data to get rid of those who refused to report their smoking status from dataset with number of drinks
+alc_smoker<- filter (brfss_subset_alc_consumption, Smoke_status !=9)
+alc_smoker$Smoke_status <- factor(alc_smoker$Smoke_status)
+summary(alc_smoker$Smoke_status)
+
+# Plot of number of drinks per week by smoke status
+ggplot(alc_smoker, aes(x = Smoke_status, y = Avgdrnk_day))+geom_boxplot() + labs(title = "Relationship between cigarette use and average number of alcoholic drinks per day")
+```
+#avg number alcoholic drinks per day in past 30 days by race
+```{r}
+#filter out those who did not know/answer race from dataset with only those who reported number of drinks
+
+alc_race <- brfss_subset_alc_consumption$race_new != "missing"
+alc_race <- filter (brfss_subset_alc_consumption, race_new != "missing")
+alc_race$race_new <- factor(alc_race$race_new)
+
+# graph of average number of drinks per day in past 30 days
+ggplot(alc_race, aes(x = race_new, y = Avgdrnk_day, color=race_new))+geom_boxplot() + labs(title = "Averge number of alcoholic drinks per day by race")
+```
+#Cigarette use by race
+```{r}
+#subset data to keep only those who reported being a current smoker
+Smokers <- ifelse(brfss_final$Smoke_status == 2, "smoker", "no/missing")
+brfss_final <- cbind(brfss_final, Smokers)
+brfss_subset_smokers <- subset(brfss_final, Smokers == "smoker")
+smoke_yes <- brfss_subset_smokers$Smokers != "no/missing"
+smokers <- cbind(brfss_subset_smokers, smoke_yes)
+smokers$smoke_yes<- as.factor(smokers$smoke_yes)
+
+#filter out those who did not know/answer race from dataset with current smokers only
+smoke_race <- filter (smokers, race_new != "missing")
+smoke_race$race_new <- factor(smoke_race$race_new)
+table(smoke_race$smoke_yes, smoke_race$race_new)
+
+ggplot(smoke_race, aes(x = race_new, fill = smoke_yes)) + geom_bar() + scale_x_discrete() + ggtitle("Cigarette use by race")
+```
+#Cigarette use by sex
+```{r}
+#filter out those who refused to report their sex from dataset with current smokers only
+smoke_sex <- filter (smokers, SEX != 9)
+smoke_sex$SEX <- factor(smoke_sex$SEX)
+table(smoke_sex$smoke_yes, smoke_sex$SEX)
+
+ggplot(smoke_sex, aes(x = SEX, fill = smoke_yes)) + geom_bar(fill = "#3d70de") + scale_x_discrete(labels=c("Male", "Female")) + ggtitle("Cigarette use by sex")
+```
+#Results of exploratory data analyses
+1. The greatest number of respondents who reported binge drinking were aged 25-44. The least number of respondents who reported binge drinking were aged 18-24 and 65 or older.
+
+2. Those who did not graduate high school reported the highest amount of average drinks per day in the past 30 days followed by an almost equal number of average drinks per day reported by those who graduated high school and those who attended college or technical school. Those who graduated from college or technical school reported the lowest amount of average drinks per day. 
+
+3. Those who are not current smokers reported a greater avg number of alcoholic drinks per day in the past 30 days, compared to those who are smokers.
+
+4.Those who identified as multiracial and those who identified as other reported the greatest avg number of alcoholic drinks per day in the past 30 days. Those who identified as White and those who identified as Asian reported the lowest avg number of alcoholic drinks per day in the past 30 days.  
+
+5. The greatest number of respondents who reported being current smokers identified as white, followed by those who fell into the other category. The least number of respondents who reported being current smokers were respondents who identified as Asian.
+
+5. A greater number of females reported being current smokers as compared to males.
+
+#infrential statistics
+
+#2-sample Chi-square test to examine binge drinking by age
+```{r}
+table(binge_drnk$binge_yes, binge_drnk$age_new)
+summary(table(brfss_final$binge_drink, brfss_final$age_new))
+bingdrinkage <- chisq.test(x=table(brfss_final$binge_drink, brfss_final$age_new))
+bingdrinkage
+```
+#Results of Chi square test
+A chi-square test of independence was performed to compare differences in binge drinking by age. Among those who reported binge dinking, 3887 individuals were between 18-24, 12505 between 25-44, 11882 between 45-64 and 3900 were 65 or older. The results of the chi-square test were significant x^2 (6) = 13086, p < 2.2e-16 and were associated with a small effect size, Cramer's V = 0.05. These results show that there are differences in the amount of binge drinking reported by individuals of different age groups.
+
+## One-way ANOVA to examine differences in average number of alcoholic drinks comsumed per day in the past 30 days by education level
+```{r}
+#graph
+ggplot(alc_educ, aes(x = Education, y = Avgdrnk_day))+geom_boxplot()
+
+#Descriptives
+aggregate(x = alc_educ$Avgdrnk_day, by = list (alc_educ$Education), FUN=mean)
+aggregate(x = alc_educ$Avgdrnk_day, by = list (alc_educ$Education), FUN=sd)
+
+#examining assumptions - Homogeneity of Variance 
+bartlett.test(alc_educ$Avgdrnk_day~alc_educ$Education)
+
+#examining assumptions - Normal Distributions
+#shapiro.test(resid(lm(alc_race$DRNKWEK~alc_race$race_new)))#normal ditribution for residuals
+plot(resid(lm(alc_educ$Avgdrnk_day~alc_educ$Education)))
+
+#run one-way ANOVA
+anova(lm(alc_educ$Avgdrnk_day~alc_educ$Education))
+
+#Games Howell post hoc test for uneuqal variance
+install.packages("userfriendlyscience")
+library(userfriendlyscience)
+one.way <- oneway(alc_educ$Education, y = alc_educ$Avgdrnk_day, posthoc = 'games-howell')
+one.way
+```
+
+#Results of ANOVA
+A one-way between subjects ANOVA was coducted to examine differences in the average number of alcoholic drinks comsumed per day in the past 30 days based on education level. A alpha level of p <.05 was used for all analyses. A significant effect of education level on number of drinks per week was found (3, 122895) = 936.65, p < .001. Post hoc tests revealed significant differences in the number of drinks per week reported by those who graduated high school (M = 3.42, SD = 4.30) and those who did not graduate high school (M = 2.65, SD = 3.17) as well as significant differences in the number of drinks reported by those who Attended College or Technical School (M = 2.31, SD = 2.54) and those who did not graduate high school (M = 2.65, SD = 3.17). Significant differences in the mean number of drinks reported by those who Graduated from College or Technical School (M = 1.90, SD = 1.82) and those who did not graduate high school (M = 2.65, SD = 3.17) as well as between those who Attended College or Technical School (M = 2.31, SD = 2.54) and those who graduated high school (M = 3.42, SD = 4.30). Finally, singificant differences in the number of drinks reported by those who Graduated from College or Technical School (M = 1.90, SD = 1.82) and those who graduated high school  (M = 3.42, SD = 4.30) as well as a significant difference in the number of drinks reported by those who Graduated from College or Technical School (M = 1.90, SD = 1.82) and those who attended Attended College or Technical School (M = 2.31, SD = 2.54).
+
+The results reveal that there are significant differences in the average number of alcoholic drinks comsumed per day in the past 30 days based on education level.
+
+#Spearman's Rank to examine relationship between cigarette use and average number of alcoholic drinks comsumed per day in the past 30 days
+```{r}
+plot(Avgdrnk_day ~ as.numeric(Smoke_status), data =alc_smoker)
+cor.test(as.numeric(alc_smoker$Smoke_status),alc_smoker$Avgdrnk_day, method = "spearman")
+```
+#Results of correlation test
+A Spearman's rank correlation coefficient was calculated to examine the relationship between cigarette use and mean number of drinks per week (significance level of p < .05). The results revealed a positive relationship between cigarette use and mean number of drinks per week (r = .22, p < .001). The results were associated with a small effect size (R^2= 0.05). The results suggest that smokers reported a greater average number of alcoholic drinks comsumed per day in the past 30 days
+
+# One-way ANOVA to examine differences in average number of alcoholic drinks comsumed per day in the past 30 days by race
+```{r}
+#graph
+ggplot(alc_race, aes(x = race_new, y = Avgdrnk_day))+geom_boxplot()
+
+#Descriptives
+aggregate(x = alc_race$Avgdrnk_day, by = list (alc_race$race_new), FUN=mean)
+aggregate(x = alc_race$Avgdrnk_day, by = list (alc_race$race_new), FUN=sd)
+
+#examining assumptions - Homogeneity of Variance 
+bartlett.test(alc_race$Avgdrnk_day~alc_race$race_new)
+
+#examining assumptions - Normal Distributions
+#shapiro.test(resid(lm(alc_race$Avgdrnk_day~alc_race$race_new)))#normal ditribution for residuals
+plot(resid(lm(alc_race$Avgdrnk_day~alc_race$race_new)))
+
+#run one-way ANOVA
+anova(lm(alc_race$Avgdrnk_day~alc_race$race_new))
+
+#Games Howell post hoc test for uneuqal variance
+one.way <- oneway(alc_race$race_new, y = alc_race$Avgdrnk_day, posthoc = 'games-howell')
+one.way
+```
+#Results of ANOVA
+A one-way between subjects ANOVA was coducted to examine racial differences in the average number of alcoholic drinks comsumed per day in the past 30 days based on education level. A alpha level of p <.05 was used for all analyses. A significant effect of race on number of drinks per week was found (3, 121022) = 172.19, p < .001. Pos-hoc tests revealed significant differences in the average number of drinks per day reported by those who identified as multiracial (M = 2.63,	SD = 2.69) 
+and those who identified as Asian (M = 2.15,	SD = 2.58) as well as significant differences in the number of drinks reported by those who identified as other (M = 2.73,	SD = 3.66) and Asians (M = 2.15,	SD = 2.58). Significant differences in the number of drinks reported by whites (M = 2.17, SD = 2.360776) and multiracials (M = 2.63,	SD = 2.69) as well as significant differences in the number of drinks reported by whites (M = 2.17, SD = 2.360776) and those whi ideintified as other (M = 2.73,	SD = 3.66 )
+
+The results reveal that there are significant racial differences in the average number of alcoholic drinks comsumed per day in the past 30 days.
+
+#2-sample Chi-square test to examine cigarette use by race
+```{r}
+table(smoke_race$race_new, smoke_race$smoke_yes)
+summary(table(smoke_race$race_new, smoke_race$smoke_yes))
+smokerace <- chisq.test(x=table(smoke_race$race_new, smoke_race$smoke_yes))
+smokerace
+
+plot(smoke_race$race_new, smoke_race$smoke_yes, xlab = "race", ylab = "smoke status") 
+```
+#Results of Chi square test
+A chi-square test of independence was performed to compare differences in cigarette use by race. 319 individuals who reported smoking, 1003 multiracial, 4974 other and 28420 White. The results of the chi-square test were significant x^2 (3) = 61326, p < .001 and were associated with a large effect size, Cramer's V = 1.77. These results show that there are racial differences in cigarette use.
+
+#2-sample Chi-square test to examine cigarette use by gender	
+```{r}
+summary(table(smoke_sex$smoke_yes, smoke_sex$SEX))
+table(smoke_sex$smoke_yes, smoke_sex$SEX)
+smokegender <- chisq.test(table(smoke_sex$smoke_yes, smoke_sex$SEX))
+smokegender
+```
+#Results of Chi square test
+A chi-square test of independence was performed to compare differences in cigarette use by gender 17098 males reported being current smokers and 18277 females reported being current smokers. The results of the chi-square test were significant x^2 (1) = 39.29, p = 3.645e-10 and were associated with a small effect size, Cramer's V = 0.00. These results show that there are differences in cigarette use by gender.
+
+#discussion and interpretation
+The results show that there are racial/ethnic differences in alcohol consumption as well as differences based on education level. There are also racial/ethnic differences in cigarette use as well as gender differences. In addition, there is a significant positive correlation between cigarette use and alcohol consumption, which is consistent with my hypothesis. Age differences in binge drinking were also found. The results do not support the hypothesis that whites consume a greater number of average drinks per day and the hypothesis that those with higher education levels also consume a greater number of average drinks per day. The finding that a greater number of females reported being current smokers is consistent with my hypothesis.
+
+A limitation of the dataset is that the participants answered the survey questions via self-report, which means that the data may not be completely accurate. Further, a number of variables such as binge drinking and cigarette use were categorical, limiting the nature of the conclusions that can be drawn using these variables.
+
+The results suggest that that alcohol related intervention programs should target those with lower education levels as well as those who might identify as multiracial. Interventions regarding cigarette use may benefit targeting females and whites, as these groups have been shown greater cigarette use.  Furthermore, future research could examine intervention programs that target both alcohol use and cigarette use, as they are found to be associated.
+
+#References
+Delker, E., Brown, Q., & Hasin, D. S. (2016). Alcohol Consumption in Demographic Subpopulations. Alcohol Research : Current Reviews, 38(1), 7–15.
+Jamal, A., Homa, D. M., O’Connor, E., Babb, S. D., Caraballo, R. S., Singh, T., … King, B. A. (2019). Current Cigarette Smoking Among Adults — United States, 2005–2014. 64(44), 9.
+Patrick, M. E., Terry-McElrath, Y. M., Miech, R. A., Schulenberg, J. E., O’Malley, P. M., & Johnston, L. D. (2017). Age-Specific Prevalence of Binge and High-Intensity Drinking Among U.S. Young Adults: Changes from 2005 to 2015. Alcoholism, Clinical and Experimental Research, 41(7), 1319–1328. https://doi.org/10.1111/acer.13413
+Reed, M. B., Wang, R., Shillington, A. M., Clapp, J. D., & Lange, J. E. (2007). The relationship between alcohol use and cigarette smoking in a sample of undergraduate college students. Addictive Behaviors, 32(3), 449–464. https://doi.org/10.1016/j.addbeh.2006.05.016
